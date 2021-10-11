@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./Cart.module.css";
 import { useAppSelector, useAppDispatch } from "../../app/hooks";
-import { checkout,getTotalPrice,removeToCart,updateQuantity } from './cartSlice';
+import { checkoutCart,getTotalPrice,removeToCart,updateQuantity } from './cartSlice';
 import classNames from 'classnames';
 export function Cart() {
   const dispatch = useAppDispatch();
@@ -9,6 +9,7 @@ export function Cart() {
   const items = useAppSelector((state) => state.cart.items);
   const totalPrice = useAppSelector(getTotalPrice);
   const checkoutState = useAppSelector((state)=>state.cart.checkoutState);
+  const errorMessage = useAppSelector((state)=>state.cart.errorMessage);
   function onQuanityChanged(e:React.FocusEvent<HTMLInputElement>,id:string){
     const quantity = Number(e.target.value) || 0;
     dispatch(updateQuantity({id,quantity}))
@@ -21,7 +22,7 @@ export function Cart() {
   });
   function onCheckout(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
-    dispatch(checkout())
+    dispatch(checkoutCart())
   }
   return (
     <main className="page">
@@ -69,6 +70,7 @@ export function Cart() {
         </tfoot>
       </table>
       <form onSubmit={onCheckout}> 
+      {checkoutState === 'ERROR' && errorMessage ? (<p className={styles.errorBox}>{errorMessage}</p>):null}
         <button className={styles.button} type="submit">
           Checkout
         </button>

@@ -1,16 +1,25 @@
 
-import {createSlice,PayloadAction,createSelector} from '@reduxjs/toolkit';
-import { RootState,AppDispatch } from '../../app/store';
+import {createSlice,PayloadAction,createSelector,createAsyncThunk} from '@reduxjs/toolkit';
+import { RootState, AppDispatch } from '../../app/store';
+import {CartItems,checkout} from '../../app/api';
 
 type CheckoutState = "LOADING"|"READY"|"ERROR";
 export interface CartState{
     items:{[productID:string]:number};
     checkoutState:CheckoutState;
+    errorMessage:string
 };
 const initialState: CartState = {
     items:{},
-    checkoutState:'READY'
+    checkoutState:'READY',
+    errorMessage:''
 };
+export const checkoutCart = createAsyncThunk<{success: boolean},undefined,{state:RootState}>('cart/checkout',async(_,thunkAPI)=>{
+    const state = thunkAPI.getState();
+    const items = state.cart.items;
+    const response = await checkout(items);
+    return response;
+})
 const cartSlice = createSlice({
     name: 'cart',
     initialState,
@@ -33,23 +42,27 @@ const cartSlice = createSlice({
       
     },
     extraReducers: function(builder){
-        builder.addCase('cart/checkout/pending',(state,action)=>{
-            state.checkoutState = 'LOADING'
+        builder.addCase(checkoutCart.pending,(state,action)=>{
+            state.checkoutState = 'LOADING';
         });
-        builder.addCase('cart/checkout/fulfilled',(state,action)=>{
-            state.checkoutState = 'READY'
+        builder.addCase(checkoutCart.fulfilled,(state,action:PayloadAction<{success: boolean}>)=>{
+            const {success} = action.payload;
+            if(success){
+                state.checkoutState = 'READY';
+                state.items={};
+            }else{
+                 state.checkoutState = 'ERROR';
+            }
+            
+        });
+        builder.addCase(checkoutCart.rejected,(state,action)=>{
+            state.checkoutState = 'ERROR';
+            state.errorMessage = action.error.message || "";
         })
     }
     
 });
-export function checkout(){
-    return function checkoutThunk(dispatch:AppDispatch){
-        dispatch({type:'cart/checkout/pending'});
-        setTimeout(() => {
-            dispatch({type:'cart/checkout/fulfilled'});
-        }, 500);
-    }
-}
+
 export const {addToCart,removeToCart,updateQuantity} = cartSlice.actions;
 export default cartSlice.reducer;
 
